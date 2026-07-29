@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>挂谷猜想 · KAKEYA 3D LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1520;
+  --bg2:#0D1B29;
+  --panel:rgba(12,23,36,.92);
+  --panel2:rgba(15,28,43,.88);
+  --line:rgba(126,171,204,.14);
+  --line2:rgba(126,171,204,.30);
+  --ink:#EAF2F8;
+  --mut:#93AEC1;
+  --dim:#5F7A92;
+  --amber:#F6B64B;
+  --amber2:#FFD38C;
+  --cyan:#43D9C9;
+  --cyan2:#8FE9FF;
+  --coral:#F2637E;
+  --green:#63D896;
+  --f-disp:'Fraunces','Noto Serif SC',serif;
+  --f-body:'IBM Plex Sans','Noto Sans SC',sans-serif;
+  --f-mono:'IBM Plex Mono','Noto Sans SC',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--f-body);
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+::selection{background:rgba(246,182,75,.35)}
+
+/* ============ header ============ */
+header{
+  position:fixed;top:0;left:0;right:0;height:62px;z-index:40;
+  display:flex;align-items:center;gap:22px;
+  padding:0 24px;
+  background:rgba(10,19,29,.9);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:11px;flex:none}
+.brand svg{display:block}
+.brand-txt b{font-family:var(--f-disp);font-weight:900;font-size:17px;letter-spacing:.01em;display:block;line-height:1.05}
+.brand-txt i{font-family:var(--f-mono);font-style:normal;font-size:9px;letter-spacing:.22em;color:var(--dim);display:block;margin-top:2px}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tab{
+  appearance:none;border:1px solid transparent;background:transparent;color:var(--mut);
+  font-family:var(--f-body);font-size:13px;font-weight:500;
+  padding:8px 14px;border-radius:9px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;
+  transition:color .25s,background .25s,border-color .25s;
+}
+.tab em{font-family:var(--f-mono);font-style:normal;font-size:10px;color:var(--dim);letter-spacing:.05em;transition:color .25s}
+.tab:hover{color:var(--ink);background:rgba(126,171,204,.07)}
+.tab.active{color:var(--ink);background:rgba(67,217,201,.09);border-color:rgba(67,217,201,.35)}
+.tab.active em{color:var(--cyan)}
+.badge{
+  flex:none;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;
+  color:var(--amber2);border:1px solid rgba(246,182,75,.4);background:rgba(246,182,75,.08);
+  padding:5px 11px;border-radius:999px;white-space:nowrap;
+}
+.badge b{font-weight:600}
+
+/* ============ stage ============ */
+#stage{position:fixed;top:62px;left:0;right:0;bottom:0}
+#canvas-wrap{position:absolute;inset:0}
+#canvas-wrap canvas{display:block}
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(6,12,19,.55) 100%),
+    linear-gradient(180deg, rgba(6,12,19,.35) 0%, transparent 14%);
+}
+.gridlines{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:.5;
+  background-image:
+    linear-gradient(rgba(126,171,204,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126,171,204,.045) 1px, transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(90% 80% at 50% 45%, #000 30%, transparent 100%);
+  -webkit-mask-image:radial-gradient(90% 80% at 50% 45%, #000 30%, transparent 100%);
+}
+
+/* ============ HUD panels ============ */
+.hud{position:absolute;z-index:10;opacity:0;transform:translateY(14px);pointer-events:none;
+  transition:opacity .5s ease,transform .5s cubic-bezier(.16,.84,.34,1)}
+.hud.show{opacity:1;transform:none;pointer-events:auto}
+
+.hud-left{left:30px;top:30px;max-width:400px}
+.kicker{font-family:var(--f-mono);font-size:10px;letter-spacing:.24em;color:var(--cyan);
+  display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.kicker::after{content:"";height:1px;width:46px;background:linear-gradient(90deg,var(--cyan),transparent)}
+.hud-left h2{
+  font-family:var(--f-disp);font-weight:900;font-size:clamp(30px,3.4vw,44px);
+  line-height:1.12;letter-spacing:-.01em;margin-bottom:14px;
+  text-shadow:0 2px 24px rgba(6,12,19,.8);
+}
+.hud-left h2 .hl{color:var(--amber2);font-style:italic}
+.hud-left p{font-size:13.5px;line-height:1.75;color:var(--mut);max-width:360px;
+  text-shadow:0 1px 12px rgba(6,12,19,.9)}
+.formula{
+  margin-top:16px;display:inline-flex;align-items:baseline;gap:8px;
+  font-family:var(--f-mono);font-size:13px;color:var(--cyan2);
+  border:1px solid rgba(67,217,201,.3);background:rgba(67,217,201,.07);
+  padding:8px 14px;border-radius:9px;
+}
+.formula b{font-size:16px;font-weight:600;color:var(--cyan2)}
+
+.hud-right{right:30px;top:30px;width:322px;display:flex;flex-direction:column;gap:12px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:13px;
+  padding:16px 18px;box-shadow:0 18px 48px rgba(3,8,14,.5);
+}
+.card h3{font-family:var(--f-mono);font-size:10px;font-weight:600;letter-spacing:.2em;
+  color:var(--dim);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--cyan)}
+
+.readout{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.readout label{font-size:12px;color:var(--mut);width:100%;margin-bottom:2px}
+.readout b{font-family:var(--f-mono);font-size:34px;font-weight:600;color:var(--amber2);
+  letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.readout span{font-family:var(--f-mono);font-size:12px;color:var(--dim)}
+.readout.cyan b{color:var(--cyan2)}
+
+.ctl-row{display:flex;align-items:center;gap:10px;margin-top:13px}
+.btn{
+  appearance:none;cursor:pointer;font-family:var(--f-body);font-size:12.5px;font-weight:600;
+  color:var(--bg);background:var(--amber);border:none;border-radius:8px;padding:8px 16px;
+  transition:transform .18s,background .18s,box-shadow .18s;flex:none;
+}
+.btn:hover{background:var(--amber2);transform:translateY(-1px);box-shadow:0 6px 18px rgba(246,182,75,.3)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--cyan2);border:1px solid rgba(67,217,201,.4)}
+.btn.ghost:hover{background:rgba(67,217,201,.1);box-shadow:none}
+.slider-wrap{flex:1;display:flex;flex-direction:column;gap:5px}
+.slider-wrap label{font-size:11px;color:var(--mut);display:flex;justify-content:space-between}
+.slider-wrap label output{font-family:var(--f-mono);color:var(--cyan2)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;
+  background:rgba(126,171,204,.22);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;
+  border-radius:50%;background:var(--amber);border:2px solid #0B1520;
+  box-shadow:0 0 0 1px rgba(246,182,75,.5),0 2px 8px rgba(0,0,0,.5);transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--amber);
+  border:2px solid #0B1520;box-shadow:0 0 0 1px rgba(246,182,75,.5)}
+input[type=range].cyan::-webkit-slider-thumb{background:var(--cyan);box-shadow:0 0 0 1px rgba(67,217,201,.5),0 2px 8px rgba(0,0,0,.5)}
+input[type=range].cyan::-moz-range-thumb{background:var(--cyan);box-shadow:0 0 0 1px rgba(67,217,201,.5)}
+
+.area-bars{display:flex;flex-direction:column;gap:9px}
+.area-bar{position:relative;border:1px solid var(--line);border-radius:9px;padding:9px 12px 11px;
+  overflow:hidden;cursor:default;transition:border-color .25s,transform .25s}
+.area-bar:hover{border-color:var(--line2);transform:translateX(-2px)}
+.area-bar i{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(67,217,201,.10);
+  border-right:1px solid rgba(67,217,201,.35);transition:width .6s cubic-bezier(.16,.84,.34,1)}
+.area-bar.hot i{background:rgba(246,182,75,.13);border-right-color:rgba(246,182,75,.5)}
+.area-bar .row{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.area-bar b{font-size:12.5px;font-weight:600}
+.area-bar span{font-family:var(--f-mono);font-size:11px;color:var(--cyan2)}
+.area-bar.hot span{color:var(--amber2)}
+.area-bar small{position:relative;display:block;font-size:10.5px;color:var(--dim);margin-top:3px}
+.note{font-size:11.5px;line-height:1.65;color:var(--dim);padding:0 2px}
+.note b{color:var(--mut);font-weight:600}
+
+.hint{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.18em;color:var(--dim);
+  display:flex;gap:18px;pointer-events:none}
+.hint span{display:flex;align-items:center;gap:6px}
+.hint b{color:var(--mut);font-weight:500}
+
+/* scene 2 extras */
+#decayChart,#stepDemo{display:block;width:100%;border-radius:8px}
+#stepDemo{background:rgba(8,16,26,.6);border:1px solid var(--line)}
+.legend{display:flex;gap:14px;margin-top:8px;font-size:10.5px;color:var(--dim)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+
+/* scene 3 dim chips */
+.dimchips{display:flex;flex-direction:column;gap:8px}
+.dimchip{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.dimchip .n{font-family:var(--f-mono);font-size:15px;font-weight:600;width:52px;flex:none}
+.dimchip .t{font-size:11.5px;line-height:1.5;color:var(--mut);flex:1}
+.dimchip .tag{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.06em;padding:3px 8px;border-radius:999px;flex:none}
+.dimchip.done .n{color:var(--green)} .dimchip.done .tag{color:var(--green);border:1px solid rgba(99,216,150,.4);background:rgba(99,216,150,.08)}
+.dimchip.star .n{color:var(--amber2)} .dimchip.star .tag{color:var(--amber2);border:1px solid rgba(246,182,75,.45);background:rgba(246,182,75,.1)}
+.dimchip.open .n{color:var(--coral)} .dimchip.open .tag{color:var(--coral);border:1px solid rgba(242,99,126,.4);background:rgba(242,99,126,.08)}
+
+/* ============ timeline ============ */
+#timeline{position:fixed;top:62px;left:0;right:0;bottom:0;overflow-y:auto;z-index:20;
+  display:none;padding:70px 24px 90px;
+  background:
+    radial-gradient(80% 50% at 50% -10%, rgba(67,217,201,.06), transparent 70%),
+    var(--bg);
+}
+#timeline.show{display:block}
+.tl-inner{max-width:760px;margin:0 auto}
+.tl-head{margin-bottom:56px}
+.tl-head .kicker{margin-bottom:16px}
+.tl-head h2{font-family:var(--f-disp);font-weight:900;font-size:clamp(32px,4vw,50px);line-height:1.1;letter-spacing:-.01em}
+.tl-head h2 .hl{color:var(--amber2);font-style:italic}
+.tl-head p{margin-top:14px;font-size:14px;line-height:1.8;color:var(--mut);max-width:560px}
+.tl{position:relative;padding-left:34px}
+.tl::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:1px;
+  background:linear-gradient(180deg,var(--cyan),rgba(126,171,204,.25) 60%,var(--coral))}
+.tl-item{position:relative;padding:0 0 46px}
+.tl-item::before{content:"";position:absolute;left:-31px;top:7px;width:11px;height:11px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--cyan);box-shadow:0 0 0 4px rgba(67,217,201,.12)}
+.tl-item.star::before{border-color:var(--amber);box-shadow:0 0 0 4px rgba(246,182,75,.18),0 0 18px rgba(246,182,75,.5)}
+.tl-item.open::before{border-color:var(--coral);box-shadow:0 0 0 4px rgba(242,99,126,.15)}
+.tl-year{font-family:var(--f-mono);font-size:13px;font-weight:600;letter-spacing:.14em;color:var(--cyan2);margin-bottom:7px}
+.tl-item.star .tl-year{color:var(--amber2)}
+.tl-item.open .tl-year{color:var(--coral)}
+.tl-item h3{font-family:var(--f-disp);font-weight:900;font-size:21px;margin-bottom:8px;letter-spacing:-.01em}
+.tl-item p{font-size:13.5px;line-height:1.8;color:var(--mut);max-width:600px}
+.tl-item p b{color:var(--ink);font-weight:600}
+.tl-tag{display:inline-block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.1em;
+  padding:3px 9px;border-radius:999px;margin-bottom:10px;border:1px solid var(--line2);color:var(--mut)}
+.tl-item.star .tl-tag{color:var(--amber2);border-color:rgba(246,182,75,.45);background:rgba(246,182,75,.08)}
+.tl-item.open .tl-tag{color:var(--coral);border-color:rgba(242,99,126,.4);background:rgba(242,99,126,.07)}
+.tl-item{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,.84,.34,1)}
+.tl-item.in{opacity:1;transform:none}
+.foot{max-width:760px;margin:30px auto 0;padding-top:26px;border-top:1px solid var(--line);
+  font-size:11.5px;line-height:1.9;color:var(--dim)}
+.foot b{color:var(--mut);font-weight:600}
+
+/* loading / error */
+#boot{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;gap:16px;
+  align-items:center;justify-content:center;background:var(--bg);transition:opacity .6s}
+#boot.hide{opacity:0;pointer-events:none}
+#boot .spin{width:34px;height:34px;border-radius:50%;border:2px solid rgba(126,171,204,.2);
+  border-top-color:var(--cyan);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#boot p{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--dim)}
+
+/* ============ tablet ============ */
+@media (max-width:960px){
+  header{height:52px;padding:0 14px;gap:12px}
+  .brand-txt b{font-size:14px}
+  .brand-txt i{font-size:8px}
+  .tabs{overflow-x:auto;scrollbar-width:none;margin-left:auto}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:6px 10px;font-size:12px}
+  .tab em{font-size:9px}
+  .badge{display:none}
+  #stage{top:52px}
+  .hud-left{left:14px;top:14px;right:14px;max-width:none}
+  .hud-left h2{font-size:clamp(22px,5vw,30px)}
+  .hud-left p{font-size:12.5px;max-width:none}
+  .hud-right{left:14px;right:14px;top:auto;bottom:48px;width:auto;
+    flex-direction:row;overflow-x:auto;gap:10px;padding-bottom:4px;scrollbar-width:none}
+  .hud-right::-webkit-scrollbar{display:none}
+  .hud-right .card{min-width:260px;flex:none}
+  .hint{display:none}
+  /* timeline */
+  #timeline{top:52px;padding:50px 18px 70px}
+  .tl-head h2{font-size:clamp(26px,6vw,36px)}
+}
+
+/* ============ phone ============ */
+@media (max-width:640px){
+  header{height:46px;padding:0 10px;gap:8px}
+  .brand svg{width:24px;height:24px}
+  .brand-txt b{font-size:13px}
+  .brand-txt i{display:none}
+  .tab{padding:5px 8px;font-size:11px;gap:5px;border-radius:7px}
+  .tab em{display:none}
+  #stage{top:46px}
+
+  /* HUD left: compact overlay */
+  .hud-left{left:10px;top:10px;right:10px}
+  .kicker{font-size:9px;margin-bottom:8px}
+  .hud-left h2{font-size:20px;margin-bottom:8px;line-height:1.2}
+  .hud-left p{display:none}
+  .formula{margin-top:8px;font-size:11px;padding:6px 10px}
+  .formula b{font-size:13px}
+
+  /* HUD right: bottom drawer */
+  .hud-right{
+    left:0;right:0;bottom:0;top:auto;width:100%;
+    flex-direction:column;gap:0;overflow:visible;
+    max-height:42vh;overflow-y:auto;
+    background:var(--panel);border-top:1px solid var(--line2);
+    border-radius:16px 16px 0 0;
+    padding:10px 12px calc(env(safe-area-inset-bottom,8px) + 10px);
+    transform:translateY(calc(100% - 52px));
+    transition:transform .35s cubic-bezier(.16,.84,.34,1);
+    -webkit-overflow-scrolling:touch;
+  }
+  .hud-right.show{transform:translateY(calc(100% - 52px))}
+  .hud-right.expanded{transform:translateY(0)}
+  .hud-right .card{min-width:0;border:none;border-bottom:1px solid var(--line);border-radius:0;
+    padding:12px 4px;box-shadow:none;background:transparent}
+  .hud-right .card:last-child{border-bottom:none}
+  .hud-right .card h3{margin-bottom:8px}
+  .readout b{font-size:26px}
+
+  /* drawer handle */
+  .hud-right::before{
+    content:"";display:block;width:36px;height:4px;border-radius:2px;
+    background:var(--line2);margin:0 auto 8px;cursor:pointer;flex:none;
+  }
+
+  /* scene 2 canvases smaller */
+  #decayChart{height:120px !important}
+  #stepDemo{height:160px !important}
+
+  /* timeline phone */
+  #timeline{top:46px;padding:40px 14px 60px}
+  .tl-head{margin-bottom:36px}
+  .tl-head h2{font-size:24px}
+  .tl-head p{font-size:12.5px;line-height:1.7}
+  .tl{padding-left:26px}
+  .tl::before{left:6px}
+  .tl-item::before{left:-24px;width:9px;height:9px}
+  .tl-item h3{font-size:17px}
+  .tl-item p{font-size:12.5px;line-height:1.7}
+  .tl-year{font-size:12px}
+  .foot{font-size:10.5px}
+}
+
+/* ============ very small phone ============ */
+@media (max-width:380px){
+  .hud-left h2{font-size:17px}
+  .formula{font-size:10px;padding:5px 8px}
+  .tab{padding:4px 6px;font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<div id="boot"><div class="spin"></div><p>LOADING KAKEYA LAB</p></div>
+
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+      <circle cx="15" cy="15" r="12.5" stroke="#43D9C9" stroke-opacity=".55" stroke-width="1.4"/>
+      <line x1="6" y1="21" x2="24" y2="9" stroke="#F6B64B" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="15" cy="15" r="2.1" fill="#F6B64B"/>
+    </svg>
+    <div class="brand-txt"><b>挂谷猜想</b><i>KAKEYA CONJECTURE · 3D LAB</i></div>
+  </div>
+  <nav class="tabs">
+    <button class="tab active" data-scene="1"><em>01</em>转针问题</button>
+    <button class="tab" data-scene="2"><em>02</em>Perron 树</button>
+    <button class="tab" data-scene="3"><em>03</em>三维突破</button>
+    <button class="tab" data-scene="4"><em>04</em>历史年表</button>
+  </nav>
+  <div class="badge">2025 · <b>ℝ³ 获证</b></div>
+</header>
+
+<main id="stage">
+  <div id="canvas-wrap"></div>
+  <div class="gridlines"></div>
+  <div class="vignette"></div>
+
+  <!-- ===== Scene 1 HUD ===== -->
+  <div class="hud hud-left show" id="hudL1">
+    <div class="kicker">SCENE 01 · 1917 · 转针问题</div>
+    <h2>旋转一根针，<br>最小需要<span class="hl">多大面积</span>？</h2>
+    <p>挂谷宗一猜想：直径为 1 的圆盘就是最小答案。针绕中心旋转 180° 即扫过整个圆盘——但这个"显而易见"的直觉，错了。</p>
+    <div class="formula">A<sub>圆盘</sub> = π/4 <b>≈ 0.7854</b></div>
+  </div>
+  <div class="hud hud-right show" id="hudR1">
+    <div class="card">
+      <h3>实时扫掠</h3>
+      <div class="readout"><label>针已扫过的面积</label><b id="sweptArea">0.0000</b><span>/ 0.7854</span></div>
+      <div class="ctl-row">
+        <button class="btn" id="play1">暂停</button>
+        <div class="slider-wrap"><label>旋转速度 <output id="speed1v">1.0×</output></label>
+          <input type="range" id="speed1" min="0.2" max="3" step="0.1" value="1"></div>
+      </div>
+      <div class="ctl-row" style="margin-top:8px">
+        <div class="slider-wrap" style="flex:1"><label>针角度 <output id="angle1">0°</output></label></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>三种容器 · 面积对比</h3>
+      <div class="area-bars">
+        <div class="area-bar hot" style="--w:100%"><i></i><div class="row"><b>圆盘</b><span>π/4 ≈ 0.7854</span></div><small>挂谷的猜想答案（错误）</small></div>
+        <div class="area-bar" style="--w:73.5%"><i></i><div class="row"><b>等边三角形</b><span>1/√3 ≈ 0.5774</span></div><small>高为 1，针可旋转（运动含平移）</small></div>
+        <div class="area-bar" style="--w:50%"><i></i><div class="row"><b>三尖内摆线</b><span>π/8 ≈ 0.3927</span></div><small>更小的容器</small></div>
+      </div>
+      <p class="note" style="margin-top:12px"><b>那最小能到多少？</b> 1928 年 Besicovitch 证明：可以任意小——见 Scene 02。</p>
+    </div>
+  </div>
+
+  <!-- ===== Scene 2 HUD ===== -->
+  <div class="hud hud-left" id="hudL2">
+    <div class="kicker">SCENE 02 · 1928 · BESICOVITCH–PERRON</div>
+    <h2>面积可以<span class="hl">任意小</span>，<br>针却照样转得动</h2>
+    <p>把三角形底边 2<sup>k</sup> 等分后切割、平移、重叠，每次迭代面积大幅缩小；无限迭代后得到一个面积为 0、却包含每个方向单位线段的集合。</p>
+    <div class="formula">S<sub>n</sub> ≈ S₀ / 2ⁿ <b>→ 0</b></div>
+  </div>
+  <div class="hud hud-right" id="hudR2">
+    <div class="card">
+      <h3>构造读数</h3>
+      <div class="readout cyan"><label>当前构造的实测面积（n 次迭代后）</label><b id="perronArea">—</b><span id="perronAreaRef">/ S₀</span></div>
+      <div class="ctl-row">
+        <button class="btn" id="play2">逐步演示</button>
+        <button class="btn ghost" id="reset2">重置</button>
+      </div>
+      <div class="ctl-row" style="margin-top:8px">
+        <div class="slider-wrap"><label>迭代深度 n <output id="nv">3</output></label>
+          <input type="range" class="cyan" id="nSlider" min="0" max="8" step="1" value="3"></div>
+      </div>
+      <div class="ctl-row" style="margin-top:8px">
+        <div class="slider-wrap"><label>每步等分数 2ᵏ <output id="kv">4</output></label>
+          <input type="range" class="cyan" id="kSlider" min="1" max="3" step="1" value="2"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>面积衰减曲线</h3>
+      <canvas id="decayChart" width="560" height="200"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--cyan)"></i>实测面积</span>
+        <span><i style="background:rgba(246,182,75,.7)"></i>理论 S₀·rⁿ 参考</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>单步机理 · 切割 → 平移重叠</h3>
+      <canvas id="stepDemo" width="560" height="300"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== Scene 3 HUD ===== -->
+  <div class="hud hud-left" id="hudL3">
+    <div class="kicker">SCENE 03 · 2025 · 三维情形获证</div>
+    <h2>每一个方向，<br>都装着一根<span class="hl">针</span></h2>
+    <p>挂谷猜想：ℝⁿ 中包含每个方向单位线段的集合（Besicovitch 集），其 Hausdorff 维数必为 n。方向有 2 个自由度，每根针 1 维——三维空间里，它"至少"是 3 维的。2025 年，Zahl 与 Zhang 证明了这一点。</p>
+    <div class="formula">dim<sub>H</sub>(K ⊂ ℝ³) <b>= 3</b></div>
+  </div>
+  <div class="hud hud-right" id="hudR3">
+    <div class="card">
+      <h3>方向采样</h3>
+      <div class="readout"><label>Fibonacci 球面均匀方向数</label><b id="dirCount">12</b><span>/ 2000</span></div>
+      <div class="ctl-row">
+        <button class="btn" id="play3">填充方向</button>
+        <div class="slider-wrap"><label>方向数 N <output id="dirNv">12</output></label>
+          <input type="range" id="dirN" min="4" max="2000" step="1" value="12"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>挂谷猜想 · 各维数状态</h3>
+      <div class="dimchips">
+        <div class="dimchip done"><span class="n">n = 2</span><span class="t">平面情形：Besicovitch 集维数为 2</span><span class="tag">1971 已证</span></div>
+        <div class="dimchip star"><span class="n">n = 3</span><span class="t">三维情形：维数为 3（Zahl–Zhang）</span><span class="tag">2025 获证 ★</span></div>
+        <div class="dimchip open"><span class="n">n ≥ 4</span><span class="t">高维情形仍是开放问题</span><span class="tag">未解决</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">
+    <span><b>拖拽</b> 旋转视角</span><span><b>滚轮</b> 缩放</span><span><b>右键拖拽</b> 平移</span>
+  </div>
+</main>
+
+<!-- ===== Scene 4 : timeline ===== -->
+<section id="timeline">
+  <div class="tl-inner">
+    <div class="tl-head">
+      <div class="kicker">SCENE 04 · 1917 — 至今</div>
+      <h2>一根针的<span class="hl">百年之旅</span></h2>
+      <p>从一个"显而易见"的几何直觉，到推翻直觉的惊人构造，再到跨越一个世纪的三维证明——挂谷猜想串联起几何、测度与调和分析。</p>
+    </div>
+    <div class="tl">
+      <div class="tl-item"><span class="tl-tag">问题诞生</span><div class="tl-year">1917</div><h3>挂谷宗一提问</h3><p>日本数学家挂谷宗一（Sōichi Kakeya）提出：在平面上连续旋转一根单位长度的针，所需区域的<b>最小面积</b>是多少？他猜想答案是直径为 1 的圆盘，面积 π/4 ≈ 0.7854。</p></div>
+      <div class="tl-item"><span class="tl-tag">反直觉</span><div class="tl-year">1919</div><h3>Besicovitch 的零测集</h3><p>Abram Besicovitch 构造出一个面积为 <b>0</b> 的平面集合，却包含<b>每个方向</b>的单位线段（Besicovitch 集）。"面积最小"的答案就此崩塌。</p></div>
+      <div class="tl-item"><span class="tl-tag">构造</span><div class="tl-year">1928</div><h3>Perron 树</h3><p>Oskar Perron 给出简化构造：把三角形切割、平移、重叠，每次迭代面积大幅缩小，可以压缩到<b>任意接近 0</b>。本页 Scene 02 演示的正是这一过程。</p></div>
+      <div class="tl-item"><span class="tl-tag">已证 ✓</span><div class="tl-year">1971</div><h3>Davies 证明二维情形</h3><p>Roy Davies 证明：平面上的 Besicovitch 集 <b>Hausdorff 维数必为 2</b>。面积可以是零，但"维数"骗不了人——挂谷猜想在二维成立。</p></div>
+      <div class="tl-item"><span class="tl-tag">高维推进</span><div class="tl-year">1995</div><h3>Wolff 与调和分析</h3><p>Thomas Wolff 将问题推向高维，引入 Kakeya 极大函数猜想并证明维数下界，揭示其与 <b>Fourier 限制性猜想</b>等调和分析核心问题的深刻联系。</p></div>
+      <div class="tl-item"><span class="tl-tag">进展</span><div class="tl-year">2017</div><h3>Katz–Zahl 三维下界 5/2</h3><p>证明 ℝ³ 中 Besicovitch 集的 Hausdorff 维数<b>至少为 5/2</b>，向完整的三维猜想逼近。</p></div>
+      <div class="tl-item star"><span class="tl-tag">重大突破 ★</span><div class="tl-year">2025</div><h3>Zahl–Zhang 证明三维挂谷猜想</h3><p>Joshua Zahl 与 Ruixiang Zhang 证明：ℝ³ 中的 Besicovitch 集 <b>Hausdorff 维数为 3</b>。困扰数学界一个多世纪的猜想在三维情形获得完全解决，是几何测度论数十年来最重要的突破之一。</p></div>
+      <div class="tl-item open"><span class="tl-tag">开放</span><div class="tl-year">n ≥ 4</div><h3>高维仍未解决</h3><p>四维及更高维的挂谷猜想至今仍是<b>开放问题</b>，等待下一个突破。</p></div>
+    </div>
+    <div class="foot">
+      <b>参考资料</b> · Zahl &amp; Zhang, <i>The Kakeya conjecture in ℝ³</i> (arXiv, 2025)；T. Wolff, <i>Recent progress connected with the Kakeya problem</i>；Terence Tao, 限制性猜想与 Kakeya 问题综述；Wikipedia: Kakeya needle problem / Besicovitch set。<br>
+      本页为科普演示：Perron 树按标准"切割—平移—重叠"构造逐迭代生成，面积为栅格化实测值；方向采样采用 Fibonacci 球面均匀分布。
+    </div>
+  </div>
+</section>
+
+<script>window.__errs=[];window.onerror=function(m,s,l,c){window.__errs.push(m+' @'+l+':'+c)};window.addEventListener('unhandledrejection',function(e){window.__errs.push('rejection: '+e.reason)});</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+"use strict";
+if(!window.THREE){ document.querySelector('#boot p').textContent='THREE.JS 加载失败，请检查网络'; return; }
+
+/* ================= DOM refs (must be early — used by all scenes) ================= */
+const el={};
+['sweptArea','angle1','speed1','speed1v','play1','perronArea','perronAreaRef','play2','reset2',
+ 'nSlider','kSlider','nv','kv','decayChart','stepDemo','dirCount','dirN','dirNv','play3']
+ .forEach(id=>el[id]=document.getElementById(id));
+
+/* ================= renderer / scene / camera ================= */
+const wrap = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setClearColor(0x0B1520,1);
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0B1520, 0.16);
+const camera = new THREE.PerspectiveCamera(46, 1, 0.05, 60);
+camera.position.set(0,1.15,1.75);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.06;
+controls.minDistance = 0.5; controls.maxDistance = 8;
+controls.target.set(0,0.05,0);
+
+function resize(){
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  renderer.setSize(w,h);
+  // widen FOV on portrait / narrow screens so scene stays framed
+  const portrait = h > w * 1.2;
+  camera.fov = portrait ? 58 : (w < 640 ? 52 : 46);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize); resize();
+
+/* ================= ambient particles ================= */
+const P = (function(){
+  const N=260, pos=new Float32Array(N*3), vel=new Float32Array(N);
+  for(let i=0;i<N;i++){ pos[i*3]=(Math.random()-.5)*7; pos[i*3+1]=Math.random()*3-0.4; pos[i*3+2]=(Math.random()-.5)*7; vel[i]=0.03+Math.random()*0.06; }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const m=new THREE.PointsMaterial({color:0x8FE9FF,size:0.012,transparent:true,opacity:0.35,blending:THREE.AdditiveBlending,depthWrite:false});
+  const pts=new THREE.Points(g,m); scene.add(pts);
+  return {update(dt){ const a=g.attributes.position.array; for(let i=0;i<N;i++){ a[i*3+1]+=vel[i]*dt; if(a[i*3+1]>2.8) a[i*3+1]=-0.4; } g.attributes.position.needsUpdate=true; }};
+})();
+
+/* ================= shared ground grid ================= */
+const grid = new THREE.PolarGridHelper(2.4, 8, 5, 64, 0x2A4A63, 0x1B3247);
+grid.material.transparent=true; grid.material.opacity=0.28; grid.position.y=-0.002;
+scene.add(grid);
+
+/* ============================================================
+   SCENE 1 — needle rotating in a disk
+============================================================ */
+const g1 = new THREE.Group(); scene.add(g1);
+
+const diskGeo = new THREE.CircleGeometry(0.5, 160); diskGeo.rotateX(-Math.PI/2);
+const diskMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  uniforms:{ uSweep:{value:0} },
+  vertexShader:`varying vec2 vP; void main(){ vP=position.xz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader:`
+    varying vec2 vP; uniform float uSweep;
+    void main(){
+      float r=length(vP);
+      float phi=atan(vP.y,vP.x);
+      float psi=mod(phi,3.141592653589793);
+      float swept=step(psi,uSweep);
+      vec3 cyan=vec3(0.263,0.851,0.788);
+      vec3 amber=vec3(0.965,0.714,0.294);
+      vec3 col = cyan*0.10 + amber*0.34*swept;
+      float edge=smoothstep(0.5,0.47,r);
+      float ring=smoothstep(0.012,0.0,abs(r-0.5));
+      col += cyan*ring*0.9;
+      float alpha = max(edge*(0.35+0.55*swept), ring*0.95);
+      gl_FragColor=vec4(col,alpha);
+    }`
+});
+g1.add(new THREE.Mesh(diskGeo, diskMat));
+
+const needle = new THREE.Group();
+(function(){
+  const amber=0xF6B64B;
+  const core=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.007,1,10),
+    new THREE.MeshBasicMaterial({color:amber}));
+  core.rotation.z=Math.PI/2;
+  const glow=new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.026,1,10),
+    new THREE.MeshBasicMaterial({color:amber,transparent:true,opacity:0.16,blending:THREE.AdditiveBlending,depthWrite:false}));
+  glow.rotation.z=Math.PI/2;
+  const tipG=new THREE.SphereGeometry(0.013,12,12);
+  const tipM=new THREE.MeshBasicMaterial({color:0xFFD38C});
+  const t1=new THREE.Mesh(tipG,tipM); t1.position.x=0.5;
+  const t2=new THREE.Mesh(tipG,tipM); t2.position.x=-0.5;
+  const pivot=new THREE.Mesh(new THREE.SphereGeometry(0.016,12,12), new THREE.MeshBasicMaterial({color:0x43D9C9}));
+  needle.add(core,glow,t1,t2,pivot);
+})();
+g1.add(needle);
+
+const s1={alpha:0, speed:1, playing:true};
+
+function updateScene1(dt){
+  if(s1.playing) s1.alpha=(s1.alpha + dt*s1.speed*0.8)%(Math.PI*2);
+  const sweep=Math.min(s1.alpha, Math.PI);
+  diskMat.uniforms.uSweep.value=sweep;
+  needle.rotation.y=-s1.alpha;
+  el.sweptArea.textContent=(sweep/4).toFixed(4);
+  el.angle1.textContent=Math.round(s1.alpha*180/Math.PI)+'°';
+}
+
+/* ============================================================
+   SCENE 2 — Perron tree
+============================================================ */
+const g2 = new THREE.Group(); scene.add(g2); g2.visible=false;
+
+const V={ add:(a,b)=>({x:a.x+b.x,y:a.y+b.y}), sub:(a,b)=>({x:a.x-b.x,y:a.y-b.y}),
+          mul:(a,s)=>({x:a.x*s,y:a.y*s}), lerp:(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}) };
+
+const BASE_TRI=[ {x:0,y:1.15}, {x:-0.8,y:0}, {x:0.8,y:0} ]; // apex, B, C
+
+function perronStep(tris,m){
+  const out=[];
+  for(const [A,B,C] of tris){
+    const d=V.sub(C,B);
+    for(let i=0;i<m;i++){
+      const Ap=V.sub(A, V.mul(d, i/m));
+      const Bp={x:B.x,y:B.y};
+      const Cp=V.add(B, V.mul(d,1/m));
+      out.push([Ap,Bp,Cp]);
+    }
+  }
+  return out;
+}
+function buildLevels(k,n){
+  const m=Math.pow(2,k); const levels=[ [BASE_TRI.slice()] ];
+  for(let s=0;s<n;s++) levels.push(perronStep(levels[levels.length-1],m));
+  return levels;
+}
+
+const perronMat=new THREE.MeshBasicMaterial({color:0x43D9C9,transparent:true,opacity:0.4,
+  blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+let perronMesh=null;
+const s2={k:2,n:3, areas:[], S0:0, trans:0};
+s2.S0 = 0.5*Math.abs( (BASE_TRI[1].x-BASE_TRI[2].x)*(BASE_TRI[0].y) ); // b*h/2 = 1.6*1.15/2
+
+function bboxOf(tris){
+  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
+  for(const [A,B,C] of tris) for(const p of [A,B,C]){
+    if(p.x<mnx)mnx=p.x; if(p.x>mxx)mxx=p.x; if(p.y<mny)mny=p.y; if(p.y>mxy)mxy=p.y;
+  }
+  return {mnx,mxx,mny,mxy};
+}
+
+function measureArea(tris){
+  const S=480, cv=measureArea.cv||(measureArea.cv=document.createElement('canvas'));
+  cv.width=cv.height=S; const ctx=cv.getContext('2d',{willReadFrequently:true});
+  const bb=bboxOf(tris); const w=bb.mxx-bb.mnx||1e-6, h=bb.mxy-bb.mny||1e-6;
+  const pad=8, sc=(S-2*pad)/Math.max(w,h);
+  const ox=(S-w*sc)/2-bb.mnx*sc, oy=(S-h*sc)/2-bb.mny*sc;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,S,S); ctx.fillStyle='#fff';
+  ctx.beginPath();
+  for(const [A,B,C] of tris){
+    ctx.moveTo(A.x*sc+ox, S-(A.y*sc+oy));
+    ctx.lineTo(B.x*sc+ox, S-(B.y*sc+oy));
+    ctx.lineTo(C.x*sc+ox, S-(C.y*sc+oy));
+    ctx.closePath();
+  }
+  ctx.fill();
+  const d=ctx.getImageData(0,0,S,S).data; let c=0;
+  for(let i=0;i<d.length;i+=4) if(d[i]>127)c++;
+  return c/(sc*sc);
+}
+
+function rebuildPerron(){
+  const levels=buildLevels(s2.k,s2.n);
+  s2.areas=levels.map(lv=>measureArea(lv));
+  const tris=levels[levels.length-1];
+  const bb=bboxOf(tris);
+  const cx=(bb.mnx+bb.mxx)/2, cy=(bb.mny+bb.mxy)/2;
+  const pos=new Float32Array(tris.length*9);
+  let o=0;
+  for(const [A,B,C] of tris) for(const p of [A,B,C]){
+    pos[o++]=p.x-cx; pos[o++]=p.y-cy; pos[o++]=0;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  if(perronMesh){ g2.remove(perronMesh); perronMesh.geometry.dispose(); }
+  perronMesh=new THREE.Mesh(geo,perronMat);
+  g2.add(perronMesh);
+  s2.trans=0;
+  // readouts
+  const a=s2.areas[s2.areas.length-1];
+  el.perronArea.textContent=a.toFixed(4);
+  el.perronAreaRef.textContent='/ S₀='+s2.S0.toFixed(3);
+  el.nv.textContent=s2.n; el.kv.textContent=Math.pow(2,s2.k);
+  drawDecayChart();
+}
+
+function drawDecayChart(){
+  const cv=el.decayChart, ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height,pl=44,pr=14,pt=16,pb=26;
+  ctx.clearRect(0,0,W,H);
+  const m=Math.pow(2,s2.k), r=(m+1)/(2*m);
+  const nMax=s2.areas.length-1;
+  const maxY=s2.S0*1.05;
+  const X=i=>pl+(W-pl-pr)*(nMax? i/nMax:0);
+  const Y=v=>pt+(H-pt-pb)*(1-v/maxY);
+  // grid + axes
+  ctx.strokeStyle='rgba(126,171,204,.14)'; ctx.lineWidth=1; ctx.font='10px IBM Plex Mono'; ctx.fillStyle='#5F7A92';
+  for(let g=0;g<=4;g++){ const v=maxY*g/4, y=Y(v);
+    ctx.beginPath();ctx.moveTo(pl,y);ctx.lineTo(W-pr,y);ctx.stroke();
+    ctx.fillText(v.toFixed(2),6,y+3); }
+  ctx.fillText('迭代 n', W-52, H-8);
+  ctx.fillText('面积', 6, 12);
+  // theory curve
+  ctx.strokeStyle='rgba(246,182,75,.65)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath();
+  for(let i=0;i<=nMax;i++){ const v=s2.S0*Math.pow(r,i); const x=X(i),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.stroke(); ctx.setLineDash([]);
+  // measured
+  ctx.strokeStyle='#43D9C9'; ctx.lineWidth=2; ctx.beginPath();
+  s2.areas.forEach((v,i)=>{const x=X(i),y=Y(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y);}); ctx.stroke();
+  ctx.fillStyle='#43D9C9';
+  s2.areas.forEach((v,i)=>{ctx.beginPath();ctx.arc(X(i),Y(v),3,0,7);ctx.fill();});
+  // x labels
+  ctx.fillStyle='#5F7A92';
+  for(let i=0;i<=nMax;i++) ctx.fillText(i, X(i)-3, H-10);
+}
+
+/* single-step demo canvas */
+function drawStepDemo(t){
+  const cv=el.stepDemo, ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
+  const m=4;
+  const A={x:W*0.5,y:H*0.16}, B={x:W*0.22,y:H*0.8}, C={x:W*0.78,y:H*0.8};
+  const d={x:C.x-B.x,y:C.y-B.y};
+  const ph=t%1;
+  let split=0, slide=0, glow=0, label='① 切割底边';
+  if(ph<0.28){ split=ph/0.28; }
+  else if(ph<0.68){ split=1; slide=(ph-0.28)/0.4; slide=slide*slide*(3-2*slide); label='② 平移重叠'; }
+  else if(ph<0.9){ split=1; slide=1; glow=(ph-0.68)/0.22; label='③ 面积 ≈ 缩小一半'; }
+  else { split=1; slide=1; glow=1-(ph-0.9)/0.1; label='③ 面积 ≈ 缩小一半'; }
+  // natural sub-triangles -> slid
+  for(let i=0;i<m;i++){
+    const Pi={x:B.x+d.x*i/m,y:B.y+d.y*i/m};
+    const nat=[A,Pi,{x:B.x+d.x*(i+1)/m,y:B.y+d.y*(i+1)/m}];
+    const slid=[{x:A.x-d.x*i/m,y:A.y-d.y*i/m},B,{x:B.x+d.x/m,y:B.y+d.y/m}];
+    const cur=nat.map((p,j)=>V.lerp(p,slid[j],slide));
+    ctx.beginPath(); ctx.moveTo(cur[0].x,cur[0].y); ctx.lineTo(cur[1].x,cur[1].y); ctx.lineTo(cur[2].x,cur[2].y); ctx.closePath();
+    ctx.fillStyle='rgba(67,217,201,'+(0.16+0.10*glow)+')'; ctx.fill();
+    ctx.strokeStyle='rgba(143,233,255,'+(0.55+0.35*glow)+')'; ctx.lineWidth=1.2; ctx.stroke();
+  }
+  // subdivision lines
+  if(split>0 && slide<0.5){
+    ctx.strokeStyle='rgba(246,182,75,'+(0.7*split*(1-slide*2))+')'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+    for(let i=1;i<m;i++){ const Pi={x:B.x+d.x*i/m,y:B.y+d.y*i/m};
+      ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(Pi.x,Pi.y);ctx.stroke(); }
+    ctx.setLineDash([]);
+  }
+  ctx.fillStyle='#93AEC1'; ctx.font='12px "Noto Sans SC"'; ctx.textAlign='center';
+  ctx.fillText(label, W/2, H-10); ctx.textAlign='left';
+}
+
+function updateScene2(dt,t){
+  if(s2.trans<1){ s2.trans=Math.min(1,s2.trans+dt*3.2);
+    const e=1-Math.pow(1-s2.trans,3);
+    if(perronMesh){ perronMesh.scale.setScalar(0.7+0.3*e); perronMat.opacity=0.4*e; } }
+  drawStepDemo(t*0.28);
+}
+
+/* ============================================================
+   SCENE 3 — directions on a sphere (Fibonacci)
+============================================================ */
+const g3 = new THREE.Group(); scene.add(g3); g3.visible=false;
+const NMAX=2000;
+const cCyan=new THREE.Color(0x43D9C9), cAmber=new THREE.Color(0xF6B64B);
+let linesGeo, pointsGeo;
+(function(){
+  const ga=Math.PI*(3-Math.sqrt(5));
+  const pos=new Float32Array(NMAX*2*3), col=new Float32Array(NMAX*2*3);
+  const ppos=new Float32Array(NMAX*3), pcol=new Float32Array(NMAX*3);
+  const tmp=new THREE.Color();
+  for(let i=0;i<NMAX;i++){
+    const y=1-(i/(NMAX-1))*2, r=Math.sqrt(Math.max(0,1-y*y)), th=ga*i;
+    const dx=Math.cos(th)*r, dy=y, dz=Math.sin(th)*r;
+    tmp.copy(cCyan).lerp(cAmber,(dy+1)/2);
+    for(const s of [-1,1]){
+      const o=(i*2+(s>0?1:0))*3;
+      pos[o]=dx*0.5*s; pos[o+1]=dy*0.5*s; pos[o+2]=dz*0.5*s;
+      col[o]=tmp.r; col[o+1]=tmp.g; col[o+2]=tmp.b;
+    }
+    ppos[i*3]=dx*0.5; ppos[i*3+1]=dy*0.5; ppos[i*3+2]=dz*0.5;
+    pcol[i*3]=tmp.r; pcol[i*3+1]=tmp.g; pcol[i*3+2]=tmp.b;
+  }
+  linesGeo=new THREE.BufferGeometry();
+  linesGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  linesGeo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  pointsGeo=new THREE.BufferGeometry();
+  pointsGeo.setAttribute('position',new THREE.BufferAttribute(ppos,3));
+  pointsGeo.setAttribute('color',new THREE.BufferAttribute(pcol,3));
+})();
+const lines=new THREE.LineSegments(linesGeo,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.75,blending:THREE.AdditiveBlending,depthWrite:false}));
+const dirPts=new THREE.Points(pointsGeo,new THREE.PointsMaterial({size:0.014,vertexColors:true,transparent:true,opacity:0.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+const sphereWire=new THREE.Mesh(new THREE.SphereGeometry(0.5,28,18),
+  new THREE.MeshBasicMaterial({color:0x2A5A73,wireframe:true,transparent:true,opacity:0.10}));
+g3.add(lines,dirPts,sphereWire);
+
+const s3={n:12,target:12,playing:false};
+function setDirCount(n){
+  s3.n=n; const c=Math.floor(n);
+  linesGeo.setDrawRange(0,c*2); pointsGeo.setDrawRange(0,c);
+  el.dirCount.textContent=c; el.dirNv.textContent=c;
+}
+function updateScene3(dt){
+  if(s3.playing){ s3.target=Math.min(NMAX, s3.target+dt*380); el.dirN.value=Math.floor(s3.target);
+    if(s3.target>=NMAX) s3.playing=false; }
+  const dn=s3.target-s3.n;
+  if(Math.abs(dn)>0.5) setDirCount(s3.n+dn*Math.min(1,dt*6));
+  g3.rotation.y+=dt*0.12;
+}
+setDirCount(12);
+
+/* ============================================================
+   scene switching / camera
+============================================================ */
+let active=1;
+const CAMS={
+  1:{pos:[0,1.05,1.7], tgt:[0,0.02,0]},
+  2:{pos:[0,0.15,2.7], tgt:[0,0,0]},
+  3:{pos:[0.4,0.55,1.55], tgt:[0,0,0]}
+};
+function setScene(n){
+  active=n;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',+b.dataset.scene===n));
+  g1.visible=n===1; g2.visible=n===2; g3.visible=n===3;
+  grid.visible=(n===1||n===3);
+  [1,2,3].forEach(i=>{
+    document.getElementById('hudL'+i).classList.toggle('show',i===n);
+    document.getElementById('hudR'+i).classList.toggle('show',i===n);
+  });
+  document.getElementById('stage').style.display=(n===4)?'none':'block';
+  document.getElementById('timeline').classList.toggle('show',n===4);
+  if(CAMS[n]){ const c=CAMS[n];
+    camera.position.set(c.pos[0],c.pos[1],c.pos[2]);
+    controls.target.set(c.tgt[0],c.tgt[1],c.tgt[2]); controls.update(); }
+  if(n===4) revealTimeline();
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setScene(+b.dataset.scene)));
+
+/* timeline reveal */
+let tlRevealed=false;
+function revealTimeline(){
+  if(tlRevealed) return; tlRevealed=true;
+  const items=[...document.querySelectorAll('.tl-item')];
+  const tlEl=document.getElementById('timeline');
+  const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('in'); io.unobserve(e.target);} }),{root:tlEl,threshold:0.1});
+  items.forEach((it,i)=>{ it.style.transitionDelay=(i*0.06)+'s'; io.observe(it); });
+  // fallback: reveal items already in viewport after a short delay
+  setTimeout(function(){ items.forEach(function(it){ var r=it.getBoundingClientRect(); var tr=tlEl.getBoundingClientRect(); if(r.top<tr.bottom && r.bottom>tr.top) it.classList.add('in'); }); }, 200);
+}
+
+/* ============================================================
+   UI wiring
+============================================================ */
+
+el.play1.addEventListener('click',()=>{ s1.playing=!s1.playing; el.play1.textContent=s1.playing?'暂停':'播放'; });
+el.speed1.addEventListener('input',()=>{ s1.speed=+el.speed1.value; el.speed1v.textContent=s1.speed.toFixed(1)+'×'; });
+
+function nMaxFor(k){ const m=Math.pow(2,k); return Math.min(14, Math.floor(Math.log(200000)/Math.log(m))); }
+el.nSlider.addEventListener('input',()=>{ s2.n=+el.nSlider.value; rebuildPerron(); });
+el.kSlider.addEventListener('input',()=>{ s2.k=+el.kSlider.value;
+  const nm=nMaxFor(s2.k); el.nSlider.max=nm; if(s2.n>nm){s2.n=nm; el.nSlider.value=nm;}
+  rebuildPerron(); });
+el.reset2.addEventListener('click',()=>{ s2.n=0; el.nSlider.value=0; rebuildPerron(); });
+let playTimer=null;
+el.play2.addEventListener('click',()=>{
+  if(playTimer){ clearInterval(playTimer); playTimer=null; el.play2.textContent='逐步演示'; return; }
+  el.play2.textContent='停止';
+  const nm=nMaxFor(s2.k); s2.n=0; el.nSlider.value=0; rebuildPerron();
+  playTimer=setInterval(()=>{ s2.n++; el.nSlider.value=s2.n; rebuildPerron();
+    if(s2.n>=nm){ clearInterval(playTimer); playTimer=null; el.play2.textContent='逐步演示'; } }, 950);
+});
+
+el.play3.addEventListener('click',()=>{ s3.playing=!s3.playing;
+  if(s3.playing && s3.target>=NMAX){ s3.target=4; setDirCount(4);} 
+  el.play3.textContent=s3.playing?'停止':'填充方向'; });
+el.dirN.addEventListener('input',()=>{ s3.target=+el.dirN.value; s3.playing=false; el.play3.textContent='填充方向'; });
+
+/* mobile drawer toggle */
+(function(){
+  const panels=document.querySelectorAll('.hud-right');
+  panels.forEach(function(p){
+    let touchStartY=0;
+    p.addEventListener('click',function(e){
+      if(window.innerWidth>640) return;
+      // only toggle if tapping the handle area (top 30px of panel)
+      const rect=p.getBoundingClientRect();
+      if(e.clientY - rect.top < 30) p.classList.toggle('expanded');
+    });
+    p.addEventListener('touchstart',function(e){ touchStartY=e.touches[0].clientY; },{passive:true});
+    p.addEventListener('touchend',function(e){
+      if(window.innerWidth>640) return;
+      const dy=e.changedTouches[0].clientY - touchStartY;
+      if(dy < -40) p.classList.add('expanded');
+      else if(dy > 40) p.classList.remove('expanded');
+    },{passive:true});
+  });
+})();
+
+/* ============================================================
+   main loop
+============================================================ */
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  if(active===1) updateScene1(dt);
+  else if(active===2) updateScene2(dt,t);
+  else if(active===3) updateScene3(dt);
+  P.update(dt);
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+/* boot */
+try {
+  rebuildPerron();
+  setScene(1);
+  animate();
+  window.__kakeyaReady = true;
+} catch(e) {
+  window.__errs.push('BOOT: ' + e.message + ' | stack: ' + (e.stack||'').substring(0,300));
+  document.querySelector('#boot p').textContent = '初始化错误: ' + e.message;
+}
+setTimeout(function(){ document.getElementById('boot').classList.add('hide'); }, 800);
+})();
+</script>
+</body>
+</html>
