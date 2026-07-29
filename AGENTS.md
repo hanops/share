@@ -1,50 +1,32 @@
 # Agent Instructions
 
-These instructions apply to the entire repository.
+These instructions apply to the entire repository. When working inside a subproject, also follow the nearest nested `AGENTS.md`.
 
-## Project model
+## Repository model
 
-- This is a zero-build GitHub Pages site.
-- Each published page lives in its own directory as `index.html`.
-- The root `index.html` is the registry for all top-level pages.
-- Do not introduce a framework, package manager, bundler, or generated asset pipeline unless the user explicitly requests that architectural change.
+- This is a zero-build GitHub Pages repository containing independent subprojects.
+- Each published subproject lives in its own top-level directory with an `index.html`, `README.md`, and `AGENTS.md`.
+- The root `index.html` is the registry for published subprojects.
+- Root tooling and configuration must stay generic. Project-specific instructions belong in that project's directory.
+- Do not introduce a framework, package manager, bundler, or generated site pipeline unless the user explicitly requests an architectural change.
 
-## Change scope
+## Shared implementation rules
 
-- Keep edits narrowly scoped to the requested page or repository support file.
-- Preserve the single-file page model unless a change clearly requires shared assets.
-- When adding a top-level page, add its directory link to the root index.
-- Do not edit unrelated copy, visual styling, or interactions while fixing a focused issue.
+- Keep changes narrowly scoped and preserve unrelated worktree changes.
+- When adding a top-level page, add it to the root index and give it local project documentation.
+- Keep local page links compatible with both local serving and the `/share/` GitHub Pages base path.
+- External runtime dependencies must use HTTPS and explicit versions.
 - Do not add analytics, tracking, credentials, or third-party services without explicit authorization.
+- Shared Python tooling must remain compatible with Python 3.9 or newer.
 
-## Implementation rules
+## Shared verification
 
-- Use semantic HTML where practical and keep `lang`, UTF-8 charset, viewport metadata, and a descriptive title on every page.
-- Keep local links relative so the site works both locally and under the `/share/` GitHub Pages base path.
-- Respect existing responsive breakpoints and `prefers-reduced-motion`.
-- External runtime dependencies must use HTTPS and an explicit version.
-- Treat factual product, scientific, biographical, award, and certification claims as source-sensitive content. Verify them before changing them; do not invent missing citations or data.
-- Maintain compatibility with current evergreen browsers. The repository tooling must remain compatible with Python 3.9+.
+Run `make check` for every repository change. For page changes, follow the additional visual and interaction checks in the subproject's `AGENTS.md`.
 
-## Verification
-
-Run:
-
-```bash
-make check
-```
-
-For visual or interaction changes, also serve the site locally with `make serve` and inspect:
-
-- the affected page at a desktop viewport;
-- the affected page at a 390 × 844 mobile viewport;
-- browser console errors;
-- horizontal overflow and loading states.
-
-Report only checks that actually ran. Do not claim factual accuracy from structural or visual verification alone.
+Only report checks that actually ran. Structural or visual checks do not establish the factual accuracy of page content.
 
 ## Delivery
 
 - Do not commit, push, publish, tag, or change GitHub Pages settings unless the user explicitly requests that action.
-- Keep generated screenshots, temporary captures, caches, and local environments out of version control.
+- Keep generated screenshots, exports, caches, and local environments out of version control.
 - Never include AI attribution in commits, pull requests, issues, or public page content.

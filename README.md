@@ -1,42 +1,30 @@
 # Share
 
-个人静态页面集合，直接由 GitHub Pages 发布，不需要构建步骤。
+由多个独立子项目组成的静态页面集合，直接通过 GitHub Pages 发布。
 
 - 在线站点：<https://hanops.github.io/share/>
 - 源码仓库：<https://github.com/hanops/share>
 
-## 页面
+## 子项目
 
-| 路径 | 内容 | 实现 |
+| 目录 | 页面 | 项目说明 |
 | --- | --- | --- |
-| `/` | 页面索引 | HTML + CSS |
-| `/ergonomic-chair/` | SPINAIR S9 Pro 电商详情页 | HTML + CSS + SVG + 原生 JavaScript |
-| `/kakeya/` | 挂谷猜想交互可视化 | HTML + CSS + Canvas + Three.js |
+| `ergonomic-chair/` | SPINAIR S9 Pro 电商详情页 | [README](ergonomic-chair/README.md) |
+| `kakeya/` | 挂谷猜想交互可视化 | [README](kakeya/README.md) |
 
-每个页面都是可独立部署的 `index.html`。样式和业务脚本以内联方式维护；字体来自 Google Fonts，挂谷页面额外从 jsDelivr 加载 Three.js 和 OrbitControls。
+每个子项目以自己的目录作为边界，并在目录内维护项目说明和 Agent 约定。根目录只负责页面索引、共享检查和仓库级配置。
 
-## 本地开发
+## 仓库级命令
 
-要求 Python 3.9 或更高版本，无需安装项目依赖。
+要求 Python 3.9 或更高版本。站点本身不需要安装依赖。
 
 ```bash
 make serve
-```
-
-然后访问 <http://127.0.0.1:8000/>。
-
-提交前运行：
-
-```bash
 make check
 ```
 
-检查会验证 HTML 基本结构、重复 ID、本地资源引用，以及首页是否收录所有一级页面。
+本地入口为 <http://127.0.0.1:8000/>。检查会验证所有 HTML 的基本结构、重复 ID、本地资源引用，以及首页是否收录全部一级页面。
 
 ## 发布
 
-`main` 分支是发布源。推送后由 GitHub Pages 直接提供仓库中的静态文件；本仓库不维护单独的构建产物。
-
-## 内容注意事项
-
-页面中的产品参数、用户数据、认证信息、数学史和奖项信息属于需要来源支撑的事实性内容。修改此类内容时，应同步核验权威来源，并避免把演示数据表述为已验证事实。
+`main` 分支是 GitHub Pages 发布源，仓库不维护单独的构建产物。

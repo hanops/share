@@ -167,12 +167,16 @@ input[type=range].cyan::-webkit-slider-thumb{background:var(--cyan);box-shadow:0
 input[type=range].cyan::-moz-range-thumb{background:var(--cyan);box-shadow:0 0 0 1px rgba(94,196,160,.4)}
 
 .area-bars{display:flex;flex-direction:column;gap:9px}
-.area-bar{position:relative;border:1px solid var(--line);border-radius:9px;padding:9px 12px 11px;
+.area-bar{position:relative;border:1px solid var(--line);border-radius:9px;padding:8px 10px;
   overflow:hidden;cursor:default;transition:border-color .25s,transform .25s}
 .area-bar:hover{border-color:var(--line2);transform:translateX(-2px)}
 .area-bar i{position:absolute;left:0;top:0;bottom:0;width:var(--w);background:rgba(94,196,160,.08);
   border-right:1px solid rgba(94,196,160,.3);transition:width .6s cubic-bezier(.16,.84,.34,1)}
 .area-bar.hot i{background:rgba(255,107,74,.1);border-right-color:rgba(255,107,74,.4)}
+.area-example{position:relative;display:grid;grid-template-columns:84px 1fr;align-items:center;gap:10px}
+.container-demo{display:block;width:84px;height:54px;border-radius:7px;
+  background:rgba(16,14,12,.38);border:1px solid rgba(200,180,155,.10)}
+.area-copy{min-width:0}
 .area-bar .row{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .area-bar b{font-size:12.5px;font-weight:600}
 .area-bar span{font-family:var(--f-mono);font-size:11px;color:var(--cyan2)}
@@ -311,6 +315,8 @@ input[type=range].cyan::-moz-range-thumb{background:var(--cyan);box-shadow:0 0 0
   .hud-right .card:last-child{border-bottom:none}
   .hud-right .card h3{margin-bottom:8px}
   .readout b{font-size:26px}
+  .area-example{grid-template-columns:92px 1fr}
+  .container-demo{width:92px;height:58px}
 
   /* drawer handle */
   .hud-right::before{
@@ -395,9 +401,18 @@ input[type=range].cyan::-moz-range-thumb{background:var(--cyan);box-shadow:0 0 0
     <div class="card">
       <h3>三种容器 · 面积对比</h3>
       <div class="area-bars">
-        <div class="area-bar hot" style="--w:100%"><i></i><div class="row"><b>圆盘</b><span>π/4 ≈ 0.7854</span></div><small>挂谷的猜想答案（错误）</small></div>
-        <div class="area-bar" style="--w:73.5%"><i></i><div class="row"><b>等边三角形</b><span>1/√3 ≈ 0.5774</span></div><small>高为 1，针可旋转（运动含平移）</small></div>
-        <div class="area-bar" style="--w:50%"><i></i><div class="row"><b>三尖内摆线</b><span>π/8 ≈ 0.3927</span></div><small>更小的容器</small></div>
+        <div class="area-bar hot" style="--w:100%"><i></i><div class="area-example">
+          <canvas class="container-demo" data-container="disk" width="240" height="150" role="img" aria-label="单位针在圆盘内绕中心旋转的循环动画"></canvas>
+          <div class="area-copy"><div class="row"><b>圆盘</b><span>π/4 ≈ 0.7854</span></div><small>绕中心旋转，扫过整个圆盘</small></div>
+        </div></div>
+        <div class="area-bar" style="--w:73.5%"><i></i><div class="area-example">
+          <canvas class="container-demo" data-container="triangle" width="240" height="150" role="img" aria-label="单位针在等边三角形内边转动边平移的循环动画"></canvas>
+          <div class="area-copy"><div class="row"><b>等边三角形</b><span>1/√3 ≈ 0.5774</span></div><small>贴边平移，容器面积更小</small></div>
+        </div></div>
+        <div class="area-bar" style="--w:50%"><i></i><div class="area-example">
+          <canvas class="container-demo" data-container="deltoid" width="240" height="150" role="img" aria-label="单位针在三尖内摆线区域中转动和平移的循环动画"></canvas>
+          <div class="area-copy"><div class="row"><b>三尖内摆线</b><span>π/8 ≈ 0.3927</span></div><small>针的包络形成三尖边界</small></div>
+        </div></div>
       </div>
       <p class="note" style="margin-top:12px"><b>那最小能到多少？</b> 1928 年 Besicovitch 证明：可以任意小——见 Scene 02。</p>
     </div>
@@ -611,6 +626,99 @@ function updateScene1(dt){
   needle.rotation.y=-s1.alpha;
   el.sweptArea.textContent=(sweep/4).toFixed(4);
   el.angle1.textContent=Math.round(s1.alpha*180/Math.PI)+'°';
+}
+
+/* Three animated container examples */
+const containerDemos=[...document.querySelectorAll('.container-demo')];
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+
+function demoStroke(ctx, x1, y1, x2, y2){
+  ctx.save();
+  ctx.lineCap='round';
+  ctx.strokeStyle='rgba(255,107,74,.18)'; ctx.lineWidth=13;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.strokeStyle='#FF8062'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.fillStyle='#FFE0D7';
+  for(const p of [[x1,y1],[x2,y2]]){ ctx.beginPath();ctx.arc(p[0],p[1],3.4,0,Math.PI*2);ctx.fill(); }
+  ctx.restore();
+}
+
+function demoBase(ctx,W,H){
+  ctx.clearRect(0,0,W,H);
+  const glow=ctx.createRadialGradient(W*.5,H*.48,2,W*.5,H*.48,W*.55);
+  glow.addColorStop(0,'rgba(94,196,160,.08)'); glow.addColorStop(1,'rgba(16,14,12,0)');
+  ctx.fillStyle=glow; ctx.fillRect(0,0,W,H);
+}
+
+function clipPolygon(poly,nx,ny,c){
+  const out=[];
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i],b=poly[(i+1)%poly.length];
+    const da=nx*a.x+ny*a.y-c, db=nx*b.x+ny*b.y-c;
+    if(da<=0) out.push(a);
+    if((da<=0)!==(db<=0)){
+      const q=da/(da-db);
+      out.push({x:a.x+(b.x-a.x)*q,y:a.y+(b.y-a.y)*q});
+    }
+  }
+  return out;
+}
+
+function triangleNeedleCenter(theta){
+  const ux=Math.cos(theta),uy=Math.sin(theta);
+  let p=[{x:-2,y:-1},{x:2,y:-1},{x:2,y:2},{x:-2,y:2}];
+  p=clipPolygon(p,0,-1,-.5*Math.abs(uy));
+  p=clipPolygon(p,Math.sqrt(3),1,1-.5*Math.abs(Math.sqrt(3)*ux+uy));
+  p=clipPolygon(p,-Math.sqrt(3),1,1-.5*Math.abs(-Math.sqrt(3)*ux+uy));
+  if(!p.length) return {x:0,y:.5};
+  return p.reduce((s,q)=>({x:s.x+q.x/p.length,y:s.y+q.y/p.length}),{x:0,y:0});
+}
+
+function drawContainerDemo(cv,t){
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  demoBase(ctx,W,H);
+  const kind=cv.dataset.container;
+  const theta=(t%(Math.PI*2));
+  ctx.save();
+  ctx.lineJoin='round';
+  if(kind==='disk'){
+    const cx=W/2,cy=H/2,r=55;
+    ctx.fillStyle='rgba(255,107,74,.055)';
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,-theta,0);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='rgba(142,223,196,.72)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+    const dx=Math.cos(theta)*r,dy=Math.sin(theta)*r;
+    demoStroke(ctx,cx-dx,cy-dy,cx+dx,cy+dy);
+  }else if(kind==='triangle'){
+    const scale=104,cx=W/2,base=H-18;
+    ctx.fillStyle='rgba(94,196,160,.055)';ctx.strokeStyle='rgba(142,223,196,.72)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(cx,base-scale);ctx.lineTo(cx-scale/Math.sqrt(3),base);ctx.lineTo(cx+scale/Math.sqrt(3),base);ctx.closePath();ctx.fill();ctx.stroke();
+    const th=theta%Math.PI, c=triangleNeedleCenter(th);
+    const px=cx+c.x*scale,py=base-c.y*scale,dx=Math.cos(th)*scale*.5,dy=-Math.sin(th)*scale*.5;
+    demoStroke(ctx,px-dx,py-dy,px+dx,py+dy);
+  }else{
+    const cx=W/2,cy=H/2+3,a=26;
+    ctx.fillStyle='rgba(94,196,160,.055)';ctx.strokeStyle='rgba(142,223,196,.72)';ctx.lineWidth=2.5;
+    ctx.beginPath();
+    for(let i=0;i<=180;i++){
+      const q=i/180*Math.PI*2;
+      const x=cx+a*(2*Math.cos(q)+Math.cos(2*q));
+      const y=cy+a*(2*Math.sin(q)-Math.sin(2*q));
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.closePath();ctx.fill();ctx.stroke();
+    const th=theta*.5;
+    const mx=cx+a*.72*Math.cos(2*th),my=cy-a*.72*Math.sin(2*th);
+    const len=58,dx=Math.cos(th)*len,dy=Math.sin(th)*len;
+    demoStroke(ctx,mx-dx,my+dy,mx+dx,my-dy);
+  }
+  ctx.restore();
+}
+
+function drawContainerDemos(t){
+  const frame=reduceMotion.matches ? 1.15 : t*.78;
+  containerDemos.forEach((cv,i)=>drawContainerDemo(cv,frame+i*.72));
 }
 
 /* ============================================================
@@ -920,6 +1028,7 @@ function animate(){
   if(active===1) updateScene1(dt);
   else if(active===2) updateScene2(dt,t);
   else if(active===3) updateScene3(dt);
+  if(active===1) drawContainerDemos(t);
   P.update(dt);
   controls.update();
   renderer.render(scene,camera);
