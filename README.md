@@ -1,6 +1,6 @@
 # Share
 
-由多个独立子项目组成的静态页面集合，直接通过 GitHub Pages 发布。
+由多个独立子项目组成的静态页面集合，当前仍可直接通过 GitHub Pages 发布，同时也已整理出一份 Sites 兼容的构建产物，方便后续切换到 GPT Site。
 
 - 在线站点：<https://hanops.github.io/share/>
 - 源码仓库：<https://github.com/hanops/share>
@@ -19,11 +19,14 @@
 要求 Python 3.9 或更高版本。站点本身不需要安装依赖。
 
 ```bash
+make build
 make serve
 make check
 ```
 
 本地入口为 <http://127.0.0.1:8000/>。检查会验证所有 HTML 的基本结构、重复 ID、本地资源引用，以及首页是否收录全部一级页面。
+
+`make build` 会把现有静态页面打包成 `dist/server/index.js` 和 `dist/.openai/hosting.json`，这是给 Sites 发布器使用的兼容结构。
 
 ## 发布
 
